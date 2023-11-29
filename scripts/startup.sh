@@ -6,16 +6,16 @@ getsetting() {
 	gawk '/^'"$2"'/ { print gensub(/^'"$2"'[ \t]+(.*)$/,"\\1","g",$0); }' $1
 }
 
-printf "Verifying file permissions..."
-REPOPATH="$(getsetting $REPOROOT/tmp/settings NEWPATH)"
-setfacl -Rdm g:git-users:rwx $REPOPATH
-printf "done\n"
-
 if [ ! -f /tmp/functions ]; then
 	read -p "Enter password length [10]: " PASSLEN
 	[[ -z "$PASSLEN" ]] && PASSLEN="10"
 
 	cat <<HERE > /tmp/functions.inc.sh
+#####################
+# Setting default file mode (u=rwx,g=rwx,o=)
+#####################
+umask 007
+
 ######################
 # General Functions
 ######################

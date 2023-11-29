@@ -23,7 +23,7 @@ build:
 
 conf : tmp/settings
 	@printf "Building Dockerfile..."
-	@m4 -DPATHVAR="ENV makenewpath=$(call getsetting,tmp/settings,NEWPATH)" -DWEBPORTVAR="ENV makewebport=$(call getsetting,tmp/settings,WEBPORT)" -DSSHPORTVAR="ENV makesshport=$(call getsetting,tmp/settings,SSHPORT)" -DCOPYCONTENT="$(call getsetting,tmp/settings,CONTENTPATH)" -DCERTFILE="ENV certfile=/tmp/$(call getsetting,tmp/settings,CERTFILE)" -DKEYFILE="ENV keyfile=/tmp/$(call getsetting,tmp/settings,CONTENTPATH)" Dockerfile.m4 > Dockerfile
+	@m4 -DPATHVAR="ENV makenewpath=$(call getsetting,tmp/settings,NEWPATH)" -DWEBPORTVAR="ENV makewebport=$(call getsetting,tmp/settings,WEBPORT)" -DSSHPORTVAR="ENV makesshport=$(call getsetting,tmp/settings,SSHPORT)" -DCOPYCONTENT="$$((test -f ./repo_content.zip && printf "COPY repo_content.zip /tmp") || echo "")" -DCERTFILE="ENV certfile=$(call getsetting,tmp/settings,CERTFILE)" -DKEYFILE="ENV keyfile=$(call getsetting,tmp/settings,KEYFILE)" Dockerfile.m4 > Dockerfile
 	@printf "done\n"
 
 tmp/settings: tmp
@@ -34,7 +34,7 @@ tmp/settings: tmp
 	$(call newsetting,Enter SSL Cert file,CERTFILE,,tmp/settings)
 	@(test -n "$(call getsetting,tmp/settings,CERTFILE)" && test -n "$(call getsetting,tmp/settings,KEYFILE)" && test -f $(call getsetting,tmp/settings,CERTFILE) && test -f $(call getsetting,tmp/settings,KEYFILE) && echo "Verified Cert/Key files") || test 1 -eq 0
 	$(call newsetting,Enter path containing existing repositories (leave empty to skip),CONTENTPATH,,tmp/settings)
-	@(grep '^CONTENTPATH[ \t]\+[^ \t]\+' tmp/settings > /dev/null && sed -i 's/^\(CONTENTPATH[ \t]\+\)\(.*\)$$/\1 COPY \2\/* '"$$(sed 's/\//\\\//g' <<< "$(call getsetting,tmp/settings,NEWPATH)")"'\//g' tmp/settings) || grep '^CONTENTPATH[ \t]*$$' tmp/settings
+	@(echo "Packaging Repository Data" && test -n "$(call getsetting,tmp/settings,CONTENTPATH)" && pushd . > /dev/null && cd $(call getsetting,tmp/settings,CONTENTPATH) && zip -qr repo_content.zip . && popd > /dev/null && mv $(call getsetting,tmp/settings,CONTENTPATH)/repo_content.zip .) || echo "Skipping copying local repositories"
 
 tmp:
 	@[[ ! -d tmp ]] && mkdir tmp || echo "tmp folder already exists"
@@ -42,3 +42,4 @@ tmp:
 clean:
 	rm -rf tmp
 	rm Dockerfile
+	@(test -f repo_content.zip && rm repo_content.zip && echo "rm repo_content.zip") || echo "Skipping rm repo_content.zip"
